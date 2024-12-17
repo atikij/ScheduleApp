@@ -1,0 +1,15 @@
+﻿<Window x:Class="ScheduleApp.InputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Input Data" Height="300" Width="400">
+    <Grid>
+        <StackPanel Margin="10">
+            <Label Name="InputLabel1" Content="Input 1"/>
+            <TextBox Name="InputTextBox1"/>
+            <Label Name="InputLabel2" Content="Input 2" Visibility="Collapsed"/>
+            <ComboBox Name="InputComboBox2" Visibility="Collapsed"/>
+            <TextBox Name="InputTextBox2" Visibility="Collapsed"/>
+            <Button Content="OK" Click="OkButton_Click" Margin="5"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,26 @@
+﻿<Window x:Class="ScheduleApp.AddPairWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Pair" Height="500" Width="400">
+    <Grid>
+        <StackPanel Margin="10">
+            <Label Content="Group"/>
+            <ComboBox Name="groupComboBox" DisplayMemberPath="NameGroup"/>
+            <Label Content="Day"/>
+            <ComboBox Name="dayComboBox"/>
+            <Label Content="Cabinet"/>
+            <ComboBox Name="cabinetComboBox" DisplayMemberPath="NameCabinet"/>
+            <Label Content="Subject"/>
+            <ComboBox Name="subjectComboBox" DisplayMemberPath="NameSubject"/>
+            <Label Content="Teacher"/>
+            <ComboBox Name="teacherComboBox" DisplayMemberPath="NameTeacher"/>
+            <Label Content="Type of Lesson"/>
+            <ComboBox Name="typeLessonComboBox" DisplayMemberPath="NameOfTypeLesson"/>
+            <Label Content="Schedule Number"/>
+            <ComboBox Name="scheduleNumberComboBox"/>
+            <Label Content="Date"/>
+            <DatePicker Name="datePicker"/>
+            <Button Content="Save" Click="AddPairButton_Click" Margin="5"/>
+        </StackPanel>
+    </Grid>
+</Window>
