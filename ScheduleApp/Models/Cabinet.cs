@@ -13,9 +13,9 @@ public partial class Cabinet
 
     public int? IdType { get; set; }
 
-    public virtual CabinetType IdTypeNavigation { get; set; }
+    public virtual Cabinettype IdTypeNavigation { get; set; }
 
     public virtual ICollection<Pair> Pairs { get; set; } = new List<Pair>();
-
     public string DisplayProperty => $"Cabinet: {NameCabinet} (Type: {IdTypeNavigation.TypeCabinet})";
+
 }

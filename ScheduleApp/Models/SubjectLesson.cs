@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace ScheduleApp.Models;
 
-public partial class SubjectLesson
+public partial class Subjectlesson
 {
     public int IdTypeless { get; set; }
 

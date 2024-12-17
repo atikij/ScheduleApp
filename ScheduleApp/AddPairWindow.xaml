@@ -18,8 +18,6 @@
             <ComboBox Name="typeLessonComboBox" DisplayMemberPath="NameOfTypeLesson"/>
             <Label Content="Schedule Number"/>
             <ComboBox Name="scheduleNumberComboBox"/>
-            <Label Content="Date"/>
-            <DatePicker Name="datePicker"/>
             <Button Content="Save" Click="AddPairButton_Click" Margin="5"/>
         </StackPanel>
     </Grid>

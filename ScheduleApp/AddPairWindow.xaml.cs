@@ -24,11 +24,11 @@ namespace ScheduleApp
 
         private void LoadData()
         {
-            groupComboBox.ItemsSource = _context.StudentGroups.ToList();
+            groupComboBox.ItemsSource = _context.Studentgroups.ToList();
             cabinetComboBox.ItemsSource = _context.Cabinets.ToList();
             subjectComboBox.ItemsSource = _context.Subjects.ToList();
             teacherComboBox.ItemsSource = _context.Teachers.ToList();
-            typeLessonComboBox.ItemsSource = _context.SubjectLessons.ToList();
+            typeLessonComboBox.ItemsSource = _context.Subjectlessons.ToList();
             dayComboBox.ItemsSource = _context.Days.ToList();
             dayComboBox.DisplayMemberPath = "DayWeek";
 
@@ -51,16 +51,15 @@ namespace ScheduleApp
 
         private void AddPairButton_Click(object sender, RoutedEventArgs e)
         {
-            var selectedGroup = (StudentGroup)groupComboBox.SelectedItem;
+            var selectedGroup = (Studentgroup)groupComboBox.SelectedItem;
             var selectedDay = (Day)dayComboBox.SelectedItem;
             var selectedCabinet = (Cabinet)cabinetComboBox.SelectedItem;
             var selectedSubject = (Subject)subjectComboBox.SelectedItem;
             var selectedTeacher = (Teacher)teacherComboBox.SelectedItem;
-            var selectedTypeLesson = (SubjectLesson)typeLessonComboBox.SelectedItem;
+            var selectedTypeLesson = (Subjectlesson)typeLessonComboBox.SelectedItem;
             var selectedScheduleNumber = (ComboBoxItem)scheduleNumberComboBox.SelectedItem;
-            var selectedDate = datePicker.SelectedDate;
 
-            if (selectedGroup != null && selectedDay != null && selectedCabinet != null && selectedSubject != null && selectedTeacher != null && selectedTypeLesson != null && selectedScheduleNumber != null && selectedDate.HasValue)
+            if (selectedGroup != null && selectedDay != null && selectedCabinet != null && selectedSubject != null && selectedTeacher != null && selectedTypeLesson != null && selectedScheduleNumber != null )
             {
                 if (_pair == null)
                 {
@@ -73,7 +72,6 @@ namespace ScheduleApp
                         IdTeacher = selectedTeacher.IdTeacher,
                         IdTypeLesson = selectedTypeLesson.IdTypeless,
                         IdSheduleNumber = (int)selectedScheduleNumber.Tag,
-                        Date = DateOnly.FromDateTime(selectedDate.Value)  // Преобразуем DateTime в DateOnly
                     };
 
                     _context.Pairs.Add(newPair);
@@ -93,7 +91,6 @@ namespace ScheduleApp
                         IdTeacher = selectedTeacher.IdTeacher,
                         IdTypeLesson = selectedTypeLesson.IdTypeless,
                         IdSheduleNumber = (int)selectedScheduleNumber.Tag,
-                        Date = DateOnly.FromDateTime(selectedDate.Value)  // Преобразуем DateTime в DateOnly
                     };
 
                     _context.Pairs.Add(updatedPair);

@@ -5,13 +5,13 @@ using System.Collections.Generic;
 
 namespace ScheduleApp.Models;
 
-public partial class CabinetType
+public partial class Cabinettype
 {
     public int IdType { get; set; }
 
     public string TypeCabinet { get; set; }
 
     public virtual ICollection<Cabinet> Cabinets { get; set; } = new List<Cabinet>();
-
     public string DisplayProperty => $"(Type: {TypeCabinet})";
+
 }

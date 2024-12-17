@@ -9,9 +9,9 @@ public partial class Semester
 {
     public int IdSemester { get; set; }
 
-    public int? NumberSemester { get; set; }
+    public int NumberSemester { get; set; }
 
     public virtual ICollection<Week> Weeks { get; set; } = new List<Week>();
-
     public string DisplayProperty => $"Semester {NumberSemester}";
+
 }

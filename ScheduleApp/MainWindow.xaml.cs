@@ -2,7 +2,10 @@
 {
     using global::ScheduleApp.Models;
     using Microsoft.EntityFrameworkCore;
+    using OfficeOpenXml;
+    using OfficeOpenXml.Style;
     using ScheduleApp.Models;
+    using System.IO;
     using System.Text;
     using System.Windows;
 
@@ -29,8 +32,8 @@
             _context.Pairs.Load();
             pairsDataGrid.ItemsSource = _context.Pairs.Local.ToBindingList();
 
-            _context.StudentGroups.Load();
-            groupsDataGrid.ItemsSource = _context.StudentGroups.Local.ToBindingList();
+            _context.Studentgroups.Load();
+            groupsDataGrid.ItemsSource = _context.Studentgroups.Local.ToBindingList();
 
             _context.Teachers.Load();
             teachersDataGrid.ItemsSource = _context.Teachers.Local.ToBindingList();
@@ -38,14 +41,14 @@
             _context.Cabinets.Load();
             cabinetsDataGrid.ItemsSource = _context.Cabinets.Local.ToBindingList();
 
-            _context.CabinetTypes.Load();
-            cabinetTypesDataGrid.ItemsSource = _context.CabinetTypes.Local.ToBindingList();
+            _context.Cabinettypes.Load();
+            cabinetTypesDataGrid.ItemsSource = _context.Cabinettypes.Local.ToBindingList();
 
             _context.Subjects.Load();
             subjectsDataGrid.ItemsSource = _context.Subjects.Local.ToBindingList();
 
-            _context.SubjectLessons.Load();
-            subjectLessonsDataGrid.ItemsSource = _context.SubjectLessons.Local.ToBindingList();
+            _context.Subjectlessons.Load();
+            subjectLessonsDataGrid.ItemsSource = _context.Subjectlessons.Local.ToBindingList();
 
             _context.Days.Load();
             daysDataGrid.ItemsSource = _context.Days.Local.ToBindingList();
@@ -67,7 +70,7 @@
                 .Include(p => p.IdTeacherNavigation)
                 .Include(p => p.IdCabinetNavigation)
                 .Include(p => p.IdSubjectNavigation)
-                .Where(p => p.Date.HasValue && p.Date.Value == today)  // Сравниваем с DateOnly
+                //.Where(p => p.Date.HasValue && p.Date.Value == today)  // Сравниваем с DateOnly
                 .AsEnumerable()
                 .GroupBy(p => p.IdGroupNavigation.NameGroup)
                 .Select(g => new
@@ -95,7 +98,7 @@
                 .Include(p => p.IdTeacherNavigation)
                 .Include(p => p.IdCabinetNavigation)
                 .Include(p => p.IdSubjectNavigation)
-                .Where(p => p.Date.HasValue && p.Date.Value == today)  // Сравниваем с DateOnly
+                //.Where(p => p.Date.HasValue && p.Date.Value == today)  // Сравниваем с DateOnly
                 .AsEnumerable()
                 .GroupBy(p => p.IdTeacherNavigation.NameTeacher)
                 .Select(g => new
@@ -123,7 +126,7 @@
                 .Include(p => p.IdTeacherNavigation)
                 .Include(p => p.IdCabinetNavigation)
                 .Include(p => p.IdSubjectNavigation)
-                .Where(p => p.Date.HasValue && p.Date.Value == today)  
+                //.Where(p => p.Date.HasValue && p.Date.Value == today)  
                 .AsEnumerable()
                 .GroupBy(p => p.IdCabinetNavigation.NameCabinet)
                 .Select(g => new
@@ -146,69 +149,247 @@
         public static string FormatPairGroup(Pair pair)
         {
             if (pair == null) return "";
-            return $"{pair.IdTeacherNavigation.NameTeacher}\n {pair.IdCabinetNavigation.NameCabinet}\n {pair.IdSubjectNavigation.NameSubject}";
+            return $"{pair.IdTeacherNavigation.NameTeacher}\n каб.{pair.IdCabinetNavigation.NameCabinet}\n {pair.IdSubjectNavigation.NameSubject}";
         }
         private string FormatPairTeacher(Pair pair)
         {
             if (pair == null) return "";
-            return $"{pair.IdGroupNavigation.IdGroup}\n {pair.IdCabinetNavigation.NameCabinet}\n {pair.IdSubjectNavigation.NameSubject}";
+            return $"{pair.IdGroupNavigation.NameGroup}\n каб.{pair.IdCabinetNavigation.NameCabinet}\n {pair.IdSubjectNavigation.NameSubject}";
         }
         private string FormatPairCabinet(Pair pair)
         {
             if (pair == null) return "";
-            return $"{pair.IdTeacherNavigation.NameTeacher}\n {pair.IdGroupNavigation.IdGroup}\n {pair.IdSubjectNavigation.NameSubject}";
+            return $"{pair.IdTeacherNavigation.NameTeacher}\n {pair.IdGroupNavigation.NameGroup}\n {pair.IdSubjectNavigation.NameSubject}";
         }
-
-        private void SaveToFile(string content, string fileName)
+        private void ExportGroupScheduleToExcel_Click(object sender, RoutedEventArgs e)
         {
+            var groupSchedules = _context.Pairs
+                           .Include(p => p.IdGroupNavigation)
+                           .Include(p => p.IdTeacherNavigation)
+                           .Include(p => p.IdCabinetNavigation)
+                           .Include(p => p.IdSubjectNavigation)
+                           .ToList()
+                           .GroupBy(p => p.IdGroupNavigation.NameGroup)
+                           .Select(g => new
+                           {
+                               GroupName = g.Key,
+                               Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
+                           }).ToList();
+
             var saveFileDialog = new Microsoft.Win32.SaveFileDialog
             {
-                FileName = fileName,
-                DefaultExt = ".csv",
-                Filter = "CSV Files (*.csv)|*.csv"
+                FileName = "GroupSchedule.xlsx",
+                Filter = "Excel Files|*.xlsx",
+                Title = "Save Schedule as Excel File"
             };
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                System.IO.File.WriteAllText(saveFileDialog.FileName, content);
+                var file = new FileInfo(saveFileDialog.FileName);
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                using (var package = new ExcelPackage(file))
+                {
+                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
+
+                    worksheet.Cells[1, 1].Value = "Группа";
+                    worksheet.Cells[1, 2].Value = "Пара 1";
+                    worksheet.Cells[1, 3].Value = "Пара 2";
+                    worksheet.Cells[1, 4].Value = "Пара 3";
+                    worksheet.Cells[1, 5].Value = "Пара 4";
+                    worksheet.Cells[1, 6].Value = "Пара 5";
+                    worksheet.Cells[1, 7].Value = "Пара 6";
+                    worksheet.Cells[1, 8].Value = "Пара 7";
+
+                    int row = 2;
+                    foreach (var schedule in groupSchedules)
+                    {
+                        worksheet.Cells[row, 1].Value = schedule.GroupName;
+                        for (int i = 1; i <= 7; i++)
+                        {
+                            var cell = worksheet.Cells[row, i + 1];
+                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairGroup(schedule.Pairs[i]) : "";
+                            cell.Style.WrapText = true; 
+                        }
+                        row++;
+                    }
+
+                    worksheet.Cells.AutoFitColumns();
+
+                    for (int col = 2; col <= 8; col++)
+                    {
+                        var startRow = 2;
+                        while (startRow <= worksheet.Dimension.End.Row)
+                        {
+                            var cellValue = worksheet.Cells[startRow, col].Text;
+                            var endRow = startRow;
+
+                            while (endRow <= worksheet.Dimension.End.Row && worksheet.Cells[endRow, col].Text == cellValue)
+                            {
+                                endRow++;
+                            }
+
+                            if (endRow > startRow + 1)
+                            {
+                                worksheet.Cells[startRow, col, endRow - 1, col].Merge = true;
+                                worksheet.Cells[startRow, col, endRow - 1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                            }
+
+                            startRow = endRow;
+                        }
+                    }
+
+                    package.Save();
+                }
+
+                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
             }
         }
 
-        private void ExportGroupScheduleToCSV_Click(object sender, RoutedEventArgs e)
+        private void ExportTeacherScheduleToExcel_Click(object sender, RoutedEventArgs e)
         {
-            var groupSchedules = _context.Pairs
+            var teacherSchedules = _context.Pairs
+                .Include(p => p.IdTeacherNavigation)
+                .Include(p => p.IdGroupNavigation)
+                .Include(p => p.IdCabinetNavigation)
+                .Include(p => p.IdSubjectNavigation)
+                .ToList()
+                .GroupBy(p => p.IdTeacherNavigation.NameTeacher)
+                .Select(g => new
+                {
+                    TeacherName = g.Key,
+                    Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
+                }).ToList();
+
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = "TeacherSchedule.xlsx",
+                Filter = "Excel Files|*.xlsx",
+                Title = "Save Schedule as Excel File"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                var file = new FileInfo(saveFileDialog.FileName);
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                using (var package = new ExcelPackage(file))
+                {
+                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
+
+                    worksheet.Cells[1, 1].Value = "Преподователь";
+                    worksheet.Cells[1, 2].Value = "Пара 1";
+                    worksheet.Cells[1, 3].Value = "Пара 2";
+                    worksheet.Cells[1, 4].Value = "Пара 3";
+                    worksheet.Cells[1, 5].Value = "Пара 4";
+                    worksheet.Cells[1, 6].Value = "Пара 5";
+                    worksheet.Cells[1, 7].Value = "Пара 6";
+                    worksheet.Cells[1, 8].Value = "Пара 7";
+
+                    int row = 2;
+                    foreach (var schedule in teacherSchedules)
+                    {
+                        worksheet.Cells[row, 1].Value = schedule.TeacherName;
+                        for (int i = 1; i <= 7; i++)
+                        {
+                            var cell = worksheet.Cells[row, i + 1];
+                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairTeacher(schedule.Pairs[i]) : "";
+                            cell.Style.WrapText = true; // Включаем перенос текста
+                        }
+                        row++;
+                    }
+
+                    worksheet.Cells.AutoFitColumns();
+                    package.Save();
+                }
+
+                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
+            }
+        }
+        private void ExportCabinetScheduleToExcel_Click(object sender, RoutedEventArgs e)
+        {
+            var cabinetSchedules = _context.Pairs
                 .Include(p => p.IdGroupNavigation)
                 .Include(p => p.IdTeacherNavigation)
                 .Include(p => p.IdCabinetNavigation)
                 .Include(p => p.IdSubjectNavigation)
-                .ToList()  // Получаем все записи в память
-                .Where(p => p.Date.HasValue && p.Date.Value.ToDateTime(TimeOnly.MinValue) == DateTime.Now.Date)  // Фильтруем в памяти
-                .GroupBy(p => p.IdGroupNavigation.NameGroup)
+                .ToList()
+                .GroupBy(p => p.IdCabinetNavigation.NameCabinet)
                 .Select(g => new
                 {
-                    GroupName = g.Key,
-                    Pair1 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 1)),
-                    Pair2 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 2)),
-                    Pair3 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 3)),
-                    Pair4 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 4)),
-                    Pair5 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 5)),
-                    Pair6 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 6)),
-                    Pair7 = FormatPairGroup(g.FirstOrDefault(p => p.IdSheduleNumber == 7))
+                    CabinetName = g.Key,
+                    Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
                 }).ToList();
 
-
-
-            var csvContent = new StringBuilder();
-            csvContent.AppendLine("GroupName,Pair1,Pair2,Pair3,Pair4,Pair5,Pair6,Pair7");
-
-            foreach (var schedule in groupSchedules)
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
             {
-                csvContent.AppendLine($"{schedule.GroupName},{schedule.Pair1},{schedule.Pair2},{schedule.Pair3},{schedule.Pair4},{schedule.Pair5},{schedule.Pair6},{schedule.Pair7}");
+                FileName = "CabinetSchedule.xlsx",
+                Filter = "Excel Files|*.xlsx",
+                Title = "Save Schedule as Excel File"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                var file = new FileInfo(saveFileDialog.FileName);
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                using (var package = new ExcelPackage(file))
+                {
+                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
+
+                    worksheet.Cells[1, 1].Value = "Кабинет";
+                    worksheet.Cells[1, 2].Value = "Пара 1";
+                    worksheet.Cells[1, 3].Value = "Пара 2";
+                    worksheet.Cells[1, 4].Value = "Пара 3";
+                    worksheet.Cells[1, 5].Value = "Пара 4";
+                    worksheet.Cells[1, 6].Value = "Пара 5";
+                    worksheet.Cells[1, 7].Value = "Пара 6";
+                    worksheet.Cells[1, 8].Value = "Пара 7";
+
+                    int row = 2;
+                    foreach (var schedule in cabinetSchedules)
+                    {
+                        worksheet.Cells[row, 1].Value = schedule.CabinetName;
+                        for (int i = 1; i <= 7; i++)
+                        {
+                            var cell = worksheet.Cells[row, i + 1];
+                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairCabinet(schedule.Pairs[i]) : "";
+                            cell.Style.WrapText = true;
+                        }
+                        row++;
+                    }
+
+                    worksheet.Cells.AutoFitColumns();
+
+                    for (int col = 2; col <= 8; col++)
+                    {
+                        var startRow = 2;
+                        while (startRow <= worksheet.Dimension.End.Row)
+                        {
+                            var cellValue = worksheet.Cells[startRow, col].Text;
+                            var endRow = startRow;
+
+                            while (endRow <= worksheet.Dimension.End.Row && worksheet.Cells[endRow, col].Text == cellValue)
+                            {
+                                endRow++;
+                            }
+
+                            if (endRow > startRow + 1)
+                            {
+                                worksheet.Cells[startRow, col, endRow - 1, col].Merge = true;
+                                worksheet.Cells[startRow, col, endRow - 1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                            }
+
+                            startRow = endRow;
+                        }
+                    }
+
+                    package.Save();
+                }
+
+                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
             }
-
-            SaveToFile(csvContent.ToString(), "GroupSchedule.csv");
         }
-
 
         private void DeleteCabinetSchedule_Click(object sender, RoutedEventArgs e)
         {
@@ -386,12 +567,12 @@
             var newGroupWindow = new InputWindow("Add Group", "NameGroup", "Course");
             if (newGroupWindow.ShowDialog() == true)
             {
-                var newGroup = new StudentGroup
+                var newGroup = new Studentgroup
                 {
                     NameGroup = newGroupWindow.Input1,
                     Course = newGroupWindow.Input2
                 };
-                _context.StudentGroups.Add(newGroup);
+                _context.Studentgroups.Add(newGroup);
                 _context.SaveChanges();
                 groupsDataGrid.Items.Refresh();
             }
@@ -399,7 +580,7 @@
 
         private void EditGroup_Click(object sender, RoutedEventArgs e)
         {
-            if (groupsDataGrid.SelectedItem is StudentGroup selectedGroup)
+            if (groupsDataGrid.SelectedItem is Studentgroup selectedGroup)
             {
                 var editGroupWindow = new InputWindow("Edit Group", "NameGroup", "Course", selectedGroup.NameGroup, selectedGroup.Course.ToString());
                 if (editGroupWindow.ShowDialog() == true)
@@ -414,9 +595,9 @@
 
         private void DeleteGroup_Click(object sender, RoutedEventArgs e)
         {
-            if (groupsDataGrid.SelectedItem is StudentGroup selectedGroup)
+            if (groupsDataGrid.SelectedItem is Studentgroup selectedGroup)
             {
-                _context.StudentGroups.Remove(selectedGroup);
+                _context.Studentgroups.Remove(selectedGroup);
                 _context.SaveChanges();
                 groupsDataGrid.Items.Refresh();
             }
@@ -465,7 +646,7 @@
 
         private void AddCabinet_Click(object sender, RoutedEventArgs e)
         {
-            var cabinetTypes = _context.CabinetTypes.ToList();
+            var cabinetTypes = _context.Cabinettypes.ToList();
 
             var inputWindow = new InputWindow("Add Cabinet", "NameCabinet", "TypeCabinet", "", "", cabinetTypes.Cast<object>().ToList());
             if (inputWindow.ShowDialog() == true)
@@ -473,7 +654,7 @@
                 var newCabinet = new Cabinet
                 {
                     NameCabinet = inputWindow.Input1,
-                    IdTypeNavigation = (CabinetType)inputWindow.SelectedItem
+                    IdTypeNavigation = (Cabinettype)inputWindow.SelectedItem
                 };
 
                 _context.Cabinets.Add(newCabinet);
@@ -513,11 +694,11 @@
             var newCabinetTypeWindow = new InputWindow("Add Cabinet Type", "TypeCabinet");
             if (newCabinetTypeWindow.ShowDialog() == true)
             {
-                var newCabinetType = new CabinetType
+                var newCabinetType = new Cabinettype
                 {
                     TypeCabinet = newCabinetTypeWindow.Input1
                 };
-                _context.CabinetTypes.Add(newCabinetType);
+                _context.Cabinettypes.Add(newCabinetType);
                 _context.SaveChanges();
                 cabinetTypesDataGrid.Items.Refresh();
             }
@@ -525,7 +706,7 @@
 
         private void EditCabinetType_Click(object sender, RoutedEventArgs e)
         {
-            if (cabinetTypesDataGrid.SelectedItem is CabinetType selectedCabinetType)
+            if (cabinetTypesDataGrid.SelectedItem is Cabinettype selectedCabinetType)
             {
                 var editCabinetTypeWindow = new InputWindow("Edit Cabinet Type", "TypeCabinet", "", selectedCabinetType.TypeCabinet);
                 if (editCabinetTypeWindow.ShowDialog() == true)
@@ -539,9 +720,9 @@
 
         private void DeleteCabinetType_Click(object sender, RoutedEventArgs e)
         {
-            if (cabinetTypesDataGrid.SelectedItem is CabinetType selectedCabinetType)
+            if (cabinetTypesDataGrid.SelectedItem is Cabinettype selectedCabinetType)
             {
-                _context.CabinetTypes.Remove(selectedCabinetType);
+                _context.Cabinettypes.Remove(selectedCabinetType);
                 _context.SaveChanges();
                 cabinetTypesDataGrid.Items.Refresh();
             }
@@ -591,11 +772,11 @@
             var newSubjectLessonWindow = new InputWindow("Add Subject Lesson", "NameOfTypeLesson");
             if (newSubjectLessonWindow.ShowDialog() == true)
             {
-                var newSubjectLesson = new SubjectLesson
+                var newSubjectLesson = new Subjectlesson
                 {
                     NameOfTypeLesson = newSubjectLessonWindow.Input1
                 };
-                _context.SubjectLessons.Add(newSubjectLesson);
+                _context.Subjectlessons.Add(newSubjectLesson);
                 _context.SaveChanges();
                 subjectLessonsDataGrid.Items.Refresh();
             }
@@ -603,7 +784,7 @@
 
         private void EditSubjectLesson_Click(object sender, RoutedEventArgs e)
         {
-            if (subjectLessonsDataGrid.SelectedItem is SubjectLesson selectedSubjectLesson)
+            if (subjectLessonsDataGrid.SelectedItem is Subjectlesson selectedSubjectLesson)
             {
                 var editSubjectLessonWindow = new InputWindow("Edit Subject Lesson", "NameOfTypeLesson", "", selectedSubjectLesson.NameOfTypeLesson);
                 if (editSubjectLessonWindow.ShowDialog() == true)
@@ -617,9 +798,9 @@
 
         private void DeleteSubjectLesson_Click(object sender, RoutedEventArgs e)
         {
-            if (subjectLessonsDataGrid.SelectedItem is SubjectLesson selectedSubjectLesson)
+            if (subjectLessonsDataGrid.SelectedItem is Subjectlesson selectedSubjectLesson)
             {
-                _context.SubjectLessons.Remove(selectedSubjectLesson);
+                _context.Subjectlessons.Remove(selectedSubjectLesson);
                 _context.SaveChanges();
                 subjectLessonsDataGrid.Items.Refresh();
             }
@@ -628,7 +809,7 @@
         private void AddDay_Click(object sender, RoutedEventArgs e)
         {
             var weeks = _context.Weeks.Include(w => w.IdSemesterNavigation).ToList();
-            var inputWindow = new InputWindow("Add Day", "DayWeek", "Week", "", "", weeks.Cast<object>().ToList());
+            var inputWindow = new InputWindow("Add Day", "DayWeek", "Week", "", "", weeks.Cast<object>().ToList(), showDatePicker: true);
             if (inputWindow.ShowDialog() == true)
             {
                 var newDay = new Day

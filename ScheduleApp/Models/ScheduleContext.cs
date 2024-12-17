@@ -15,19 +15,21 @@ public partial class ScheduleContext : DbContext
 
     public virtual DbSet<Cabinet> Cabinets { get; set; }
 
-    public virtual DbSet<CabinetType> CabinetTypes { get; set; }
+    public virtual DbSet<Cabinettype> Cabinettypes { get; set; }
 
     public virtual DbSet<Day> Days { get; set; }
+
+    public virtual DbSet<NumberPair> NumberPairs { get; set; }
 
     public virtual DbSet<Pair> Pairs { get; set; }
 
     public virtual DbSet<Semester> Semesters { get; set; }
 
-    public virtual DbSet<StudentGroup> StudentGroups { get; set; }
+    public virtual DbSet<Studentgroup> Studentgroups { get; set; }
 
     public virtual DbSet<Subject> Subjects { get; set; }
 
-    public virtual DbSet<SubjectLesson> SubjectLessons { get; set; }
+    public virtual DbSet<Subjectlesson> Subjectlessons { get; set; }
 
     public virtual DbSet<Teacher> Teachers { get; set; }
 
@@ -36,42 +38,38 @@ public partial class ScheduleContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .UseCollation("latin1_swedish_ci")
-            .HasCharSet("latin1");
+            .UseCollation("utf8mb4_0900_ai_ci")
+            .HasCharSet("utf8mb4");
 
         modelBuilder.Entity<Cabinet>(entity =>
         {
             entity.HasKey(e => e.IdCabinet).HasName("PRIMARY");
 
-            entity.ToTable("Cabinet");
+            entity.ToTable("cabinet");
 
-            entity.HasIndex(e => e.IdType, "id_type");
+            entity.HasIndex(e => e.IdType, "fk_cabinet_cabinettype");
 
-            entity.Property(e => e.IdCabinet)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_cabinet");
-            entity.Property(e => e.IdType)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_type");
+            entity.Property(e => e.IdCabinet).HasColumnName("id_cabinet");
+            entity.Property(e => e.IdType).HasColumnName("id_type");
             entity.Property(e => e.NameCabinet)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("name_cabinet");
 
             entity.HasOne(d => d.IdTypeNavigation).WithMany(p => p.Cabinets)
                 .HasForeignKey(d => d.IdType)
-                .HasConstraintName("Cabinet_ibfk_1");
+                .HasConstraintName("cabinet_ibfk_1");
         });
 
-        modelBuilder.Entity<CabinetType>(entity =>
+        modelBuilder.Entity<Cabinettype>(entity =>
         {
             entity.HasKey(e => e.IdType).HasName("PRIMARY");
 
-            entity.ToTable("CabinetType");
+            entity.ToTable("cabinettype");
 
-            entity.Property(e => e.IdType)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_type");
+            entity.Property(e => e.IdType).HasColumnName("id_type");
             entity.Property(e => e.TypeCabinet)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("Type_Cabinet");
         });
@@ -80,23 +78,31 @@ public partial class ScheduleContext : DbContext
         {
             entity.HasKey(e => e.IdDay).HasName("PRIMARY");
 
-            entity.ToTable("Day");
+            entity.ToTable("day");
 
-            entity.HasIndex(e => e.IdWeek, "id_week");
+            entity.HasIndex(e => e.IdWeek, "fk_day_week");
 
-            entity.Property(e => e.IdDay)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_day");
+            entity.Property(e => e.IdDay).HasColumnName("id_day");
             entity.Property(e => e.DayWeek)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("day_week");
-            entity.Property(e => e.IdWeek)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_week");
+            entity.Property(e => e.IdWeek).HasColumnName("id_week");
 
             entity.HasOne(d => d.IdWeekNavigation).WithMany(p => p.Days)
                 .HasForeignKey(d => d.IdWeek)
-                .HasConstraintName("Day_ibfk_1");
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("day_ibfk_1");
+        });
+
+        modelBuilder.Entity<NumberPair>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PRIMARY");
+
+            entity.ToTable("number_pair");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.NumberPair1).HasColumnName("number_pair");
         });
 
         modelBuilder.Entity<Pair>(entity =>
@@ -105,97 +111,86 @@ public partial class ScheduleContext : DbContext
                 .HasName("PRIMARY")
                 .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0, 0, 0, 0, 0, 0, 0 });
 
-            entity.ToTable("Pair");
+            entity.ToTable("pair");
 
-            entity.HasIndex(e => e.IdCabinet, "idCabinet_idx");
+            entity.HasIndex(e => e.IdCabinet, "fk_pair_cabinet");
 
-            entity.HasIndex(e => e.IdDay, "idDay_idx");
+            entity.HasIndex(e => e.IdDay, "fk_pair_day");
 
-            entity.HasIndex(e => e.IdSubject, "idSubject_idx");
+            entity.HasIndex(e => e.IdGroup, "fk_pair_studentgroup");
 
-            entity.HasIndex(e => e.IdTeacher, "idTeacher_idx");
+            entity.HasIndex(e => e.IdSubject, "fk_pair_subject");
 
-            entity.HasIndex(e => e.IdTypeLesson, "idTypeLesson_idx");
+            entity.HasIndex(e => e.IdTeacher, "fk_pair_teacher");
 
-            entity.HasIndex(e => e.IdGroup, "id_group_idx");
+            entity.HasIndex(e => e.IdTypeLesson, "fk_pair_typelesson");
+
+            entity.HasIndex(e => e.IdSheduleNumber, "id_shedule_number");
 
             entity.Property(e => e.IdPair)
-                .HasColumnType("int(11)")
-                .HasColumnName("idPair");
-            entity.Property(e => e.IdTeacher)
-                .HasColumnType("int(11)")
-                .HasColumnName("idTeacher");
-            entity.Property(e => e.IdCabinet)
-                .HasColumnType("int(11)")
-                .HasColumnName("idCabinet");
-            entity.Property(e => e.IdGroup)
-                .HasColumnType("int(11)")
-                .HasColumnName("idGroup");
-            entity.Property(e => e.IdDay)
-                .HasColumnType("int(11)")
-                .HasColumnName("idDay");
-            entity.Property(e => e.IdTypeLesson)
-                .HasColumnType("int(11)")
-                .HasColumnName("idTypeLesson");
-            entity.Property(e => e.IdSubject)
-                .HasColumnType("int(11)")
-                .HasColumnName("idSubject");
-            entity.Property(e => e.IdSheduleNumber)
-                .HasColumnType("int(11)")
-                .HasColumnName("idSheduleNumber");
+                .ValueGeneratedOnAdd()
+                .HasColumnName("id_pair");
+            entity.Property(e => e.IdTeacher).HasColumnName("id_teacher");
+            entity.Property(e => e.IdCabinet).HasColumnName("id_cabinet");
+            entity.Property(e => e.IdGroup).HasColumnName("id_group");
+            entity.Property(e => e.IdDay).HasColumnName("id_day");
+            entity.Property(e => e.IdTypeLesson).HasColumnName("id_type_lesson");
+            entity.Property(e => e.IdSubject).HasColumnName("id_subject");
+            entity.Property(e => e.IdSheduleNumber).HasColumnName("id_shedule_number");
 
             entity.HasOne(d => d.IdCabinetNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdCabinet)
-                .HasConstraintName("id_cabinet");
+                .HasConstraintName("fk_pair_cabinet");
 
             entity.HasOne(d => d.IdDayNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdDay)
-                .HasConstraintName("id_day");
+                .HasConstraintName("fk_pair_day");
 
             entity.HasOne(d => d.IdGroupNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdGroup)
-                .HasConstraintName("id_group");
+                .HasConstraintName("fk_pair_studentgroup");
+
+            entity.HasOne(d => d.IdSheduleNumberNavigation).WithMany(p => p.Pairs)
+                .HasForeignKey(d => d.IdSheduleNumber)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("pair_ibfk_7");
 
             entity.HasOne(d => d.IdSubjectNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdSubject)
-                .HasConstraintName("id_subject");
+                .HasConstraintName("fk_pair_subject");
 
             entity.HasOne(d => d.IdTeacherNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdTeacher)
-                .HasConstraintName("id_teacher");
+                .HasConstraintName("fk_pair_teacher");
 
             entity.HasOne(d => d.IdTypeLessonNavigation).WithMany(p => p.Pairs)
                 .HasForeignKey(d => d.IdTypeLesson)
-                .HasConstraintName("id_typeless");
+                .HasConstraintName("fk_pair_typelesson");
         });
 
         modelBuilder.Entity<Semester>(entity =>
         {
             entity.HasKey(e => e.IdSemester).HasName("PRIMARY");
 
-            entity.ToTable("Semester");
+            entity.ToTable("semester");
 
-            entity.Property(e => e.IdSemester)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_semester");
-            entity.Property(e => e.NumberSemester)
-                .HasColumnType("int(11)")
-                .HasColumnName("number_semester");
+            entity.Property(e => e.IdSemester).HasColumnName("id_semester");
+            entity.Property(e => e.NumberSemester).HasColumnName("number_semester");
         });
 
-        modelBuilder.Entity<StudentGroup>(entity =>
+        modelBuilder.Entity<Studentgroup>(entity =>
         {
             entity.HasKey(e => e.IdGroup).HasName("PRIMARY");
 
-            entity.ToTable("Student_Groups");
+            entity.ToTable("studentgroup");
 
-            entity.Property(e => e.IdGroup)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_group");
+            entity.Property(e => e.IdGroup).HasColumnName("id_group");
             entity.Property(e => e.Course)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("course");
             entity.Property(e => e.NameGroup)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("name_group");
         });
@@ -204,37 +199,38 @@ public partial class ScheduleContext : DbContext
         {
             entity.HasKey(e => e.IdSubject).HasName("PRIMARY");
 
-            entity.ToTable("Subject");
+            entity.ToTable("subject");
 
-            entity.Property(e => e.IdSubject)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_subject");
+            entity.Property(e => e.IdSubject).HasColumnName("id_subject");
             entity.Property(e => e.NameSubject)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("name_subject");
         });
 
-        modelBuilder.Entity<SubjectLesson>(entity =>
+        modelBuilder.Entity<Subjectlesson>(entity =>
         {
             entity.HasKey(e => e.IdTypeless).HasName("PRIMARY");
 
-            entity.ToTable("SubjectLesson");
+            entity.ToTable("subjectlesson");
 
-            entity.Property(e => e.IdTypeless)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_typeless");
-            entity.Property(e => e.NameOfTypeLesson).HasMaxLength(45);
+            entity.Property(e => e.IdTypeless).HasColumnName("id_typeless");
+            entity.Property(e => e.NameOfTypeLesson)
+                .IsRequired()
+                .HasMaxLength(45)
+                .HasColumnName("name_of_type_lesson");
         });
 
         modelBuilder.Entity<Teacher>(entity =>
         {
             entity.HasKey(e => e.IdTeacher).HasName("PRIMARY");
 
-            entity.Property(e => e.IdTeacher)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_teacher");
+            entity.ToTable("teacher");
+
+            entity.Property(e => e.IdTeacher).HasColumnName("id_teacher");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
             entity.Property(e => e.NameTeacher)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("name_teacher");
         });
@@ -243,23 +239,20 @@ public partial class ScheduleContext : DbContext
         {
             entity.HasKey(e => e.IdWeek).HasName("PRIMARY");
 
-            entity.ToTable("Week");
+            entity.ToTable("week");
 
-            entity.HasIndex(e => e.IdSemester, "id_semester");
+            entity.HasIndex(e => e.IdSemester, "fk_week_semester");
 
-            entity.Property(e => e.IdWeek)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_week");
-            entity.Property(e => e.IdSemester)
-                .HasColumnType("int(11)")
-                .HasColumnName("id_semester");
+            entity.Property(e => e.IdWeek).HasColumnName("id_week");
+            entity.Property(e => e.IdSemester).HasColumnName("id_semester");
             entity.Property(e => e.TypeWeek)
+                .IsRequired()
                 .HasMaxLength(255)
                 .HasColumnName("type_week");
 
             entity.HasOne(d => d.IdSemesterNavigation).WithMany(p => p.Weeks)
                 .HasForeignKey(d => d.IdSemester)
-                .HasConstraintName("Week_ibfk_1");
+                .HasConstraintName("fk_week_semester");
         });
 
         OnModelCreatingPartial(modelBuilder);

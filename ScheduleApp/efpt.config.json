@@ -15,43 +15,47 @@
    "T4TemplatePath": null,
    "Tables": [
       {
-         "Name": "Cabinet",
+         "Name": "cabinet",
          "ObjectType": 0
       },
       {
-         "Name": "CabinetType",
+         "Name": "cabinettype",
          "ObjectType": 0
       },
       {
-         "Name": "Day",
+         "Name": "day",
          "ObjectType": 0
       },
       {
-         "Name": "Pair",
+         "Name": "number_pair",
          "ObjectType": 0
       },
       {
-         "Name": "Semester",
+         "Name": "pair",
          "ObjectType": 0
       },
       {
-         "Name": "Student_Groups",
+         "Name": "semester",
          "ObjectType": 0
       },
       {
-         "Name": "Subject",
+         "Name": "studentgroup",
          "ObjectType": 0
       },
       {
-         "Name": "SubjectLesson",
+         "Name": "subject",
          "ObjectType": 0
       },
       {
-         "Name": "Teachers",
+         "Name": "subjectlesson",
          "ObjectType": 0
       },
       {
-         "Name": "Week",
+         "Name": "teacher",
+         "ObjectType": 0
+      },
+      {
+         "Name": "week",
          "ObjectType": 0
       }
    ],

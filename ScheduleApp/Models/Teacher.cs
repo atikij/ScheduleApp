@@ -11,7 +11,7 @@ public partial class Teacher
 
     public string NameTeacher { get; set; }
 
-    public bool? IsActive { get; set; }
+    public bool IsActive { get; set; }
 
     public virtual ICollection<Pair> Pairs { get; set; } = new List<Pair>();
 }

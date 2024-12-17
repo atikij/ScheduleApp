@@ -6,9 +6,15 @@
         <StackPanel Margin="10">
             <Label Name="InputLabel1" Content="Input 1"/>
             <TextBox Name="InputTextBox1"/>
+
+            <!-- Label and ComboBox/TextBox for the second input -->
             <Label Name="InputLabel2" Content="Input 2" Visibility="Collapsed"/>
             <ComboBox Name="InputComboBox2" Visibility="Collapsed"/>
             <TextBox Name="InputTextBox2" Visibility="Collapsed"/>
+
+            <!-- Добавляем DatePicker, который будет скрыт по умолчанию -->
+            <DatePicker Name="InputDatePicker" Visibility="Collapsed" Margin="5" SelectedDateChanged="InputDatePicker_SelectedDateChanged"/>
+
             <Button Content="OK" Click="OkButton_Click" Margin="5"/>
         </StackPanel>
     </Grid>

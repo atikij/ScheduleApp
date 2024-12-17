@@ -23,17 +23,17 @@ public partial class Pair
 
     public int IdSheduleNumber { get; set; }
 
-    public DateOnly? Date { get; set; }
-
     public virtual Cabinet IdCabinetNavigation { get; set; }
 
     public virtual Day IdDayNavigation { get; set; }
 
-    public virtual StudentGroup IdGroupNavigation { get; set; }
+    public virtual Studentgroup IdGroupNavigation { get; set; }
+
+    public virtual NumberPair IdSheduleNumberNavigation { get; set; }
 
     public virtual Subject IdSubjectNavigation { get; set; }
 
     public virtual Teacher IdTeacherNavigation { get; set; }
 
-    public virtual SubjectLesson IdTypeLessonNavigation { get; set; }
+    public virtual Subjectlesson IdTypeLessonNavigation { get; set; }
 }

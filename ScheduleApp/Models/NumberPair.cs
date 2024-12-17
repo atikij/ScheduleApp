@@ -5,17 +5,11 @@ using System.Collections.Generic;
 
 namespace ScheduleApp.Models;
 
-public partial class Day
+public partial class NumberPair
 {
-    public int IdDay { get; set; }
+    public int Id { get; set; }
 
-    public string DayWeek { get; set; }
-
-    public int IdWeek { get; set; }
-
-    public DateOnly Date { get; set; }
-
-    public virtual Week IdWeekNavigation { get; set; }
+    public int? NumberPair1 { get; set; }
 
     public virtual ICollection<Pair> Pairs { get; set; } = new List<Pair>();
 }

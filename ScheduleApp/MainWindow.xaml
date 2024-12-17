@@ -145,8 +145,8 @@
                         </DataGrid.Columns>
                     </DataGrid>
                     <Button Content="Add Group Schedule" Click="OpenAddPairWindow_Click" Margin="5" />
-                    <Button Content="Delete Group Schedule" Click="DeleteTeacherSchedule_Click" Margin="5" />
-                    <Button Content="Export to CSV" Click="ExportGroupScheduleToCSV_Click" Margin="5" />
+                    <Button Content="Delete Group Schedule" Click="DeleteGroupSchedule_Click" Margin="5" />
+                    <Button Content="Export to CSV" Click="ExportGroupScheduleToExcel_Click" Margin="5" />
                 </StackPanel>
             </TabItem>
             <TabItem Header="Teacher Schedule">
@@ -164,10 +164,8 @@
                         </DataGrid.Columns>
                     </DataGrid>
                     <Button Content="Add Teacher Schedule" Click="OpenAddPairWindow_Click" Margin="5" />
-                    <Button Content="Delete Group Schedule" Click="DeleteTeacherSchedule_Click" Margin="5" />
-                    <!--<Button Content="Edit Teacher Schedule" Click="EditTeacherSchedule_Click" Margin="5" />
                     <Button Content="Delete Teacher Schedule" Click="DeleteTeacherSchedule_Click" Margin="5" />
-                    <Button Content="Export to CSV" Click="ExportTeacherScheduleToCSV_Click" Margin="5" />-->
+                    <Button Content="Export to CSV" Click="ExportTeacherScheduleToExcel_Click" Margin="5" />
                 </StackPanel>
             </TabItem>
             <TabItem Header="Cabinet Schedule">
@@ -186,7 +184,7 @@
                     </DataGrid>
                     <Button Content="Add Cabinet Schedule" Click="OpenAddPairWindow_Click" Margin="5" />
                     <Button Content="Delete Cabinet Schedule" Click="DeleteCabinetSchedule_Click" Margin="5" />
-                    <!--<Button Content="Export to CSV" Click="ExportCabinetScheduleToCSV_Click" Margin="5" />-->
+                    <Button Content="Export to CSV" Click="ExportCabinetScheduleToExcel_Click" Margin="5" />
                 </StackPanel>
             </TabItem>
         </TabControl>
