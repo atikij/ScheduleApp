@@ -1,0 +1,88 @@
+﻿{
+   "CodeGenerationMode": 4,
+   "ContextClassName": "mydbContext",
+   "ContextNamespace": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": false,
+   "ModelNamespace": null,
+   "OutputContextPath": null,
+   "OutputPath": "Models",
+   "PreserveCasingWithRegex": true,
+   "ProjectRootNamespace": "WebApplication1",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 2,
+   "SelectedToBeGenerated": 0,
+   "T4TemplatePath": null,
+   "Tables": [
+      {
+         "Name": "cabinet",
+         "ObjectType": 0
+      },
+      {
+         "Name": "cabinettype",
+         "ObjectType": 0
+      },
+      {
+         "Name": "day",
+         "ObjectType": 0
+      },
+      {
+         "Name": "number_pair",
+         "ObjectType": 0
+      },
+      {
+         "Name": "pair",
+         "ObjectType": 0
+      },
+      {
+         "Name": "semester",
+         "ObjectType": 0
+      },
+      {
+         "Name": "studentgroup",
+         "ObjectType": 0
+      },
+      {
+         "Name": "subject",
+         "ObjectType": 0
+      },
+      {
+         "Name": "subjectlesson",
+         "ObjectType": 0
+      },
+      {
+         "Name": "teacher",
+         "ObjectType": 0
+      },
+      {
+         "Name": "week",
+         "ObjectType": 0
+      }
+   ],
+   "UiHint": null,
+   "UncountableWords": null,
+   "UseAsyncStoredProcedureCalls": true,
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": false,
+   "UseDatabaseNamesForRoutines": true,
+   "UseDateOnlyTimeOnly": true,
+   "UseDbContextSplitting": false,
+   "UseDecimalDataAnnotationForSprocResult": true,
+   "UseFluentApiOnly": true,
+   "UseHandleBars": false,
+   "UseHierarchyId": false,
+   "UseInflector": true,
+   "UseLegacyPluralizer": false,
+   "UseManyToManyEntity": false,
+   "UseNoDefaultConstructor": false,
+   "UseNoNavigations": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UsePrefixNavigationNaming": false,
+   "UseSchemaFolders": false,
+   "UseSchemaNamespaces": false,
+   "UseSpatial": false,
+   "UseT4": false,
+   "UseT4Split": false
+}
