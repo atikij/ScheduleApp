@@ -22,7 +22,7 @@ namespace ScheduleApp
             }
         }
 
-        private void LoadData()
+        public void LoadData()
         {
             groupComboBox.ItemsSource = _context.Studentgroups.ToList();
             cabinetComboBox.ItemsSource = _context.Cabinets.ToList();
@@ -49,7 +49,7 @@ namespace ScheduleApp
             scheduleNumberComboBox.SelectedItem = scheduleNumberComboBox.Items.Cast<ComboBoxItem>().FirstOrDefault(item => (int)item.Tag == _pair.IdSheduleNumber);
         }
 
-        private void AddPairButton_Click(object sender, RoutedEventArgs e)
+        public void AddPairButton_Click(object sender, RoutedEventArgs e)
         {
             var selectedGroup = (Studentgroup)groupComboBox.SelectedItem;
             var selectedDay = (Day)dayComboBox.SelectedItem;
@@ -105,7 +105,5 @@ namespace ScheduleApp
                 MessageBox.Show("Please fill all the fields.");
             }
         }
-
-
     }
 }

@@ -2,16 +2,22 @@
 {
     using global::ScheduleApp.Models;
     using Microsoft.EntityFrameworkCore;
+    using Microsoft.Win32;
     using OfficeOpenXml;
     using OfficeOpenXml.Style;
-    using ScheduleApp.Models;
+    using QRCoder;
+    using System.Drawing;
     using System.IO;
     using System.Text;
     using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Media.Imaging;
 
     public partial class MainWindow : Window
     {
         private ScheduleContext _context;
+
+        private ScheduleExporter _exporter;
 
         public MainWindow()
         {
@@ -21,6 +27,7 @@
             optionsBuilder.UseMySql("Server=localhost;Database=mydb;User=root;Password=12345;", new MySqlServerVersion(new Version(8, 0, 21)));
 
             _context = new ScheduleContext(optionsBuilder.Options);
+            _exporter = new ScheduleExporter(_context);
             LoadData();
         }
 
@@ -60,6 +67,35 @@
             LoadTeacherSchedule();
             LoadCabinetSchedule();
         }
+        private void GenerateQRCode_Click(object sender, RoutedEventArgs e)
+        {
+            string data = "https://vkvideo.ru/video427644317_456239111";
+            Bitmap qrCodeImage = GenerateQRCode(data);
+            QRCodeImage.Source = ConvertBitmapToBitmapImage(qrCodeImage);
+        }
+
+        private Bitmap GenerateQRCode(string data)
+        {
+            QRCodeGenerator qrGenerator = new QRCodeGenerator();
+            QRCodeData qrCodeData = qrGenerator.CreateQrCode(data, QRCodeGenerator.ECCLevel.Q);
+            QRCode qrCode = new QRCode(qrCodeData);
+            return qrCode.GetGraphic(20);
+        }
+
+        private BitmapImage ConvertBitmapToBitmapImage(Bitmap bitmap)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Png);
+                memory.Position = 0;
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memory;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+                return bitmapImage;
+            }
+        }
 
         private void LoadGroupSchedule()
         {
@@ -88,7 +124,6 @@
             groupScheduleDataGrid.ItemsSource = groupSchedules;
         }
 
-
         private void LoadTeacherSchedule()
         {
             var today = DateOnly.FromDateTime(DateTime.Now); // Получаем текущую дату в формате DateOnly
@@ -116,7 +151,6 @@
             teacherScheduleDataGrid.ItemsSource = teacherSchedules;
         }
 
-
         private void LoadCabinetSchedule()
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
@@ -143,9 +177,6 @@
 
             cabinetScheduleDataGrid.ItemsSource = cabinetSchedules;
         }
-
-
-
         public static string FormatPairGroup(Pair pair)
         {
             if (pair == null) return "";
@@ -163,20 +194,7 @@
         }
         private void ExportGroupScheduleToExcel_Click(object sender, RoutedEventArgs e)
         {
-            var groupSchedules = _context.Pairs
-                           .Include(p => p.IdGroupNavigation)
-                           .Include(p => p.IdTeacherNavigation)
-                           .Include(p => p.IdCabinetNavigation)
-                           .Include(p => p.IdSubjectNavigation)
-                           .ToList()
-                           .GroupBy(p => p.IdGroupNavigation.NameGroup)
-                           .Select(g => new
-                           {
-                               GroupName = g.Key,
-                               Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
-                           }).ToList();
-
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            var saveFileDialog = new SaveFileDialog
             {
                 FileName = "GroupSchedule.xlsx",
                 Filter = "Excel Files|*.xlsx",
@@ -185,83 +203,13 @@
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                var file = new FileInfo(saveFileDialog.FileName);
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-                using (var package = new ExcelPackage(file))
-                {
-                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
-
-                    worksheet.Cells[1, 1].Value = "Группа";
-                    worksheet.Cells[1, 2].Value = "Пара 1";
-                    worksheet.Cells[1, 3].Value = "Пара 2";
-                    worksheet.Cells[1, 4].Value = "Пара 3";
-                    worksheet.Cells[1, 5].Value = "Пара 4";
-                    worksheet.Cells[1, 6].Value = "Пара 5";
-                    worksheet.Cells[1, 7].Value = "Пара 6";
-                    worksheet.Cells[1, 8].Value = "Пара 7";
-
-                    int row = 2;
-                    foreach (var schedule in groupSchedules)
-                    {
-                        worksheet.Cells[row, 1].Value = schedule.GroupName;
-                        for (int i = 1; i <= 7; i++)
-                        {
-                            var cell = worksheet.Cells[row, i + 1];
-                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairGroup(schedule.Pairs[i]) : "";
-                            cell.Style.WrapText = true; 
-                        }
-                        row++;
-                    }
-
-                    worksheet.Cells.AutoFitColumns();
-
-                    for (int col = 2; col <= 8; col++)
-                    {
-                        var startRow = 2;
-                        while (startRow <= worksheet.Dimension.End.Row)
-                        {
-                            var cellValue = worksheet.Cells[startRow, col].Text;
-                            var endRow = startRow;
-
-                            while (endRow <= worksheet.Dimension.End.Row && worksheet.Cells[endRow, col].Text == cellValue)
-                            {
-                                endRow++;
-                            }
-
-                            if (endRow > startRow + 1)
-                            {
-                                worksheet.Cells[startRow, col, endRow - 1, col].Merge = true;
-                                worksheet.Cells[startRow, col, endRow - 1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                            }
-
-                            startRow = endRow;
-                        }
-                    }
-
-                    package.Save();
-                }
-
-                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
+                _exporter.ExportGroupScheduleToExcel(saveFileDialog.FileName);
             }
         }
 
         private void ExportTeacherScheduleToExcel_Click(object sender, RoutedEventArgs e)
         {
-            var teacherSchedules = _context.Pairs
-                .Include(p => p.IdTeacherNavigation)
-                .Include(p => p.IdGroupNavigation)
-                .Include(p => p.IdCabinetNavigation)
-                .Include(p => p.IdSubjectNavigation)
-                .ToList()
-                .GroupBy(p => p.IdTeacherNavigation.NameTeacher)
-                .Select(g => new
-                {
-                    TeacherName = g.Key,
-                    Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
-                }).ToList();
-
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            var saveFileDialog = new SaveFileDialog
             {
                 FileName = "TeacherSchedule.xlsx",
                 Filter = "Excel Files|*.xlsx",
@@ -270,58 +218,12 @@
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                var file = new FileInfo(saveFileDialog.FileName);
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-                using (var package = new ExcelPackage(file))
-                {
-                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
-
-                    worksheet.Cells[1, 1].Value = "Преподователь";
-                    worksheet.Cells[1, 2].Value = "Пара 1";
-                    worksheet.Cells[1, 3].Value = "Пара 2";
-                    worksheet.Cells[1, 4].Value = "Пара 3";
-                    worksheet.Cells[1, 5].Value = "Пара 4";
-                    worksheet.Cells[1, 6].Value = "Пара 5";
-                    worksheet.Cells[1, 7].Value = "Пара 6";
-                    worksheet.Cells[1, 8].Value = "Пара 7";
-
-                    int row = 2;
-                    foreach (var schedule in teacherSchedules)
-                    {
-                        worksheet.Cells[row, 1].Value = schedule.TeacherName;
-                        for (int i = 1; i <= 7; i++)
-                        {
-                            var cell = worksheet.Cells[row, i + 1];
-                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairTeacher(schedule.Pairs[i]) : "";
-                            cell.Style.WrapText = true; // Включаем перенос текста
-                        }
-                        row++;
-                    }
-
-                    worksheet.Cells.AutoFitColumns();
-                    package.Save();
-                }
-
-                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
+                _exporter.ExportTeacherScheduleToExcel(saveFileDialog.FileName);
             }
         }
         private void ExportCabinetScheduleToExcel_Click(object sender, RoutedEventArgs e)
         {
-            var cabinetSchedules = _context.Pairs
-                .Include(p => p.IdGroupNavigation)
-                .Include(p => p.IdTeacherNavigation)
-                .Include(p => p.IdCabinetNavigation)
-                .Include(p => p.IdSubjectNavigation)
-                .ToList()
-                .GroupBy(p => p.IdCabinetNavigation.NameCabinet)
-                .Select(g => new
-                {
-                    CabinetName = g.Key,
-                    Pairs = g.ToDictionary(p => p.IdSheduleNumber, p => p)
-                }).ToList();
-
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            var saveFileDialog = new SaveFileDialog
             {
                 FileName = "CabinetSchedule.xlsx",
                 Filter = "Excel Files|*.xlsx",
@@ -330,64 +232,7 @@
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                var file = new FileInfo(saveFileDialog.FileName);
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-                using (var package = new ExcelPackage(file))
-                {
-                    var worksheet = package.Workbook.Worksheets.Add("Schedule");
-
-                    worksheet.Cells[1, 1].Value = "Кабинет";
-                    worksheet.Cells[1, 2].Value = "Пара 1";
-                    worksheet.Cells[1, 3].Value = "Пара 2";
-                    worksheet.Cells[1, 4].Value = "Пара 3";
-                    worksheet.Cells[1, 5].Value = "Пара 4";
-                    worksheet.Cells[1, 6].Value = "Пара 5";
-                    worksheet.Cells[1, 7].Value = "Пара 6";
-                    worksheet.Cells[1, 8].Value = "Пара 7";
-
-                    int row = 2;
-                    foreach (var schedule in cabinetSchedules)
-                    {
-                        worksheet.Cells[row, 1].Value = schedule.CabinetName;
-                        for (int i = 1; i <= 7; i++)
-                        {
-                            var cell = worksheet.Cells[row, i + 1];
-                            cell.Value = schedule.Pairs.ContainsKey(i) ? FormatPairCabinet(schedule.Pairs[i]) : "";
-                            cell.Style.WrapText = true;
-                        }
-                        row++;
-                    }
-
-                    worksheet.Cells.AutoFitColumns();
-
-                    for (int col = 2; col <= 8; col++)
-                    {
-                        var startRow = 2;
-                        while (startRow <= worksheet.Dimension.End.Row)
-                        {
-                            var cellValue = worksheet.Cells[startRow, col].Text;
-                            var endRow = startRow;
-
-                            while (endRow <= worksheet.Dimension.End.Row && worksheet.Cells[endRow, col].Text == cellValue)
-                            {
-                                endRow++;
-                            }
-
-                            if (endRow > startRow + 1)
-                            {
-                                worksheet.Cells[startRow, col, endRow - 1, col].Merge = true;
-                                worksheet.Cells[startRow, col, endRow - 1, col].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                            }
-
-                            startRow = endRow;
-                        }
-                    }
-
-                    package.Save();
-                }
-
-                MessageBox.Show($"Расписание успешно экспортировано в {saveFileDialog.FileName}");
+                _exporter.ExportCabinetScheduleToExcel(saveFileDialog.FileName);
             }
         }
 
@@ -523,368 +368,259 @@
                 pairsDataGrid.Items.Refresh();
             }
         }
-        private void AddSemester_Click(object sender, RoutedEventArgs e)
-        {
-                var inputWindow = new InputWindow("Add Semester", "NumberSemester");
-                if (inputWindow.ShowDialog() == true)
-                {
-                    var newSemester = new Semester
-                    {
-                        NumberSemester = int.Parse(inputWindow.Input1)
-                    };
-                    _context.Semesters.Add(newSemester);
-                    _context.SaveChanges();
-                    semestersDataGrid.Items.Refresh();
-                }
-        }
+        // SubjectLesson
+        private void AddSubjectLesson_Click(object sender, RoutedEventArgs e) => AddEntity<Subjectlesson>("Add Subject Lesson", "NameOfTypeLesson");
+        private void EditSubjectLesson_Click(object sender, RoutedEventArgs e) => EditEntity<Subjectlesson>("Edit Subject Lesson", "NameOfTypeLesson", "", subjectLessonsDataGrid);
+        private void DeleteSubjectLesson_Click(object sender, RoutedEventArgs e) => DeleteEntity<Subjectlesson>(subjectLessonsDataGrid);
 
-        private void EditSemester_Click(object sender, RoutedEventArgs e)
-        {
-                if (semestersDataGrid.SelectedItem is Semester selectedSemester)
-                {
-                    var inputWindow = new InputWindow("Edit Semester", "NumberSemester","", selectedSemester.NumberSemester.ToString());
-                    if (inputWindow.ShowDialog() == true)
-                    {
-                        selectedSemester.NumberSemester = int.Parse(inputWindow.Input1);
-                        _context.SaveChanges();
-                        semestersDataGrid.Items.Refresh();
-                    }
-                }
-        }
-
-        private void DeleteSemester_Click(object sender, RoutedEventArgs e)
-        {
-                if (semestersDataGrid.SelectedItem is Semester selectedSemester)
-                {
-                    _context.Semesters.Remove(selectedSemester);
-                    _context.SaveChanges();
-                    semestersDataGrid.Items.Refresh();
-                }
-        }
-
-        private void AddGroup_Click(object sender, RoutedEventArgs e)
-        {
-            var newGroupWindow = new InputWindow("Add Group", "NameGroup", "Course");
-            if (newGroupWindow.ShowDialog() == true)
-            {
-                var newGroup = new Studentgroup
-                {
-                    NameGroup = newGroupWindow.Input1,
-                    Course = newGroupWindow.Input2
-                };
-                _context.Studentgroups.Add(newGroup);
-                _context.SaveChanges();
-                groupsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void EditGroup_Click(object sender, RoutedEventArgs e)
-        {
-            if (groupsDataGrid.SelectedItem is Studentgroup selectedGroup)
-            {
-                var editGroupWindow = new InputWindow("Edit Group", "NameGroup", "Course", selectedGroup.NameGroup, selectedGroup.Course.ToString());
-                if (editGroupWindow.ShowDialog() == true)
-                {
-                    selectedGroup.NameGroup = editGroupWindow.Input1;
-                    selectedGroup.Course = editGroupWindow.Input2;
-                    _context.SaveChanges();
-                    groupsDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteGroup_Click(object sender, RoutedEventArgs e)
-        {
-            if (groupsDataGrid.SelectedItem is Studentgroup selectedGroup)
-            {
-                _context.Studentgroups.Remove(selectedGroup);
-                _context.SaveChanges();
-                groupsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void AddTeacher_Click(object sender, RoutedEventArgs e)
-        {
-            var newTeacherWindow = new InputWindow("Add Teacher", "NameTeacher", "IsActive");
-            if (newTeacherWindow.ShowDialog() == true)
-            {
-                var newTeacher = new Teacher
-                {
-                    NameTeacher = newTeacherWindow.Input1,
-                    IsActive = bool.Parse(newTeacherWindow.Input2)
-                };
-                _context.Teachers.Add(newTeacher);
-                _context.SaveChanges();
-                teachersDataGrid.Items.Refresh();
-            }
-        }
-
-        private void EditTeacher_Click(object sender, RoutedEventArgs e)
-        {
-            if (teachersDataGrid.SelectedItem is Teacher selectedTeacher)
-            {
-                var editTeacherWindow = new InputWindow("Edit Teacher", "NameTeacher", "IsActive", selectedTeacher.NameTeacher, selectedTeacher.IsActive.ToString());
-                if (editTeacherWindow.ShowDialog() == true)
-                {
-                    selectedTeacher.NameTeacher = editTeacherWindow.Input1;
-                    selectedTeacher.IsActive = bool.Parse(editTeacherWindow.Input2);
-                    _context.SaveChanges();
-                    teachersDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteTeacher_Click(object sender, RoutedEventArgs e)
-        {
-            if (teachersDataGrid.SelectedItem is Teacher selectedTeacher)
-            {
-                _context.Teachers.Remove(selectedTeacher);
-                _context.SaveChanges();
-                teachersDataGrid.Items.Refresh();
-            }
-        }
-
-        private void AddCabinet_Click(object sender, RoutedEventArgs e)
-        {
-            var cabinetTypes = _context.Cabinettypes.ToList();
-
-            var inputWindow = new InputWindow("Add Cabinet", "NameCabinet", "TypeCabinet", "", "", cabinetTypes.Cast<object>().ToList());
-            if (inputWindow.ShowDialog() == true)
-            {
-                var newCabinet = new Cabinet
-                {
-                    NameCabinet = inputWindow.Input1,
-                    IdTypeNavigation = (Cabinettype)inputWindow.SelectedItem
-                };
-
-                _context.Cabinets.Add(newCabinet);
-                _context.SaveChanges();
-
-                cabinetsDataGrid.Items.Refresh();
-            }
-        }
-
-
-        private void EditCabinet_Click(object sender, RoutedEventArgs e)
-        {
-            if (cabinetsDataGrid.SelectedItem is Cabinet selectedCabinet)
-            {
-                var editCabinetWindow = new InputWindow("Edit Cabinet", "NameCabinet", "", selectedCabinet.NameCabinet);
-                if (editCabinetWindow.ShowDialog() == true)
-                {
-                    selectedCabinet.NameCabinet = editCabinetWindow.Input1;
-                    _context.SaveChanges();
-                    cabinetsDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteCabinet_Click(object sender, RoutedEventArgs e)
-        {
-            if (cabinetsDataGrid.SelectedItem is Cabinet selectedCabinet)
-            {
-                _context.Cabinets.Remove(selectedCabinet);
-                _context.SaveChanges();
-                cabinetsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void AddCabinetType_Click(object sender, RoutedEventArgs e)
-        {
-            var newCabinetTypeWindow = new InputWindow("Add Cabinet Type", "TypeCabinet");
-            if (newCabinetTypeWindow.ShowDialog() == true)
-            {
-                var newCabinetType = new Cabinettype
-                {
-                    TypeCabinet = newCabinetTypeWindow.Input1
-                };
-                _context.Cabinettypes.Add(newCabinetType);
-                _context.SaveChanges();
-                cabinetTypesDataGrid.Items.Refresh();
-            }
-        }
-
-        private void EditCabinetType_Click(object sender, RoutedEventArgs e)
-        {
-            if (cabinetTypesDataGrid.SelectedItem is Cabinettype selectedCabinetType)
-            {
-                var editCabinetTypeWindow = new InputWindow("Edit Cabinet Type", "TypeCabinet", "", selectedCabinetType.TypeCabinet);
-                if (editCabinetTypeWindow.ShowDialog() == true)
-                {
-                    selectedCabinetType.TypeCabinet = editCabinetTypeWindow.Input1;
-                    _context.SaveChanges();
-                    cabinetTypesDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteCabinetType_Click(object sender, RoutedEventArgs e)
-        {
-            if (cabinetTypesDataGrid.SelectedItem is Cabinettype selectedCabinetType)
-            {
-                _context.Cabinettypes.Remove(selectedCabinetType);
-                _context.SaveChanges();
-                cabinetTypesDataGrid.Items.Refresh();
-            }
-        }
-
-        private void AddSubject_Click(object sender, RoutedEventArgs e)
-        {
-            var newSubjectWindow = new InputWindow("Add Subject", "NameSubject");
-            if (newSubjectWindow.ShowDialog() == true)
-            {
-                var newSubject = new Subject
-                {
-                    NameSubject = newSubjectWindow.Input1
-                };
-                _context.Subjects.Add(newSubject);
-                _context.SaveChanges();
-                subjectsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void EditSubject_Click(object sender, RoutedEventArgs e)
-        {
-            if (subjectsDataGrid.SelectedItem is Subject selectedSubject)
-            {
-                var editSubjectWindow = new InputWindow("Edit Subject", "NameSubject", "", selectedSubject.NameSubject);
-                if (editSubjectWindow.ShowDialog() == true)
-                {
-                    selectedSubject.NameSubject = editSubjectWindow.Input1;
-                    _context.SaveChanges();
-                    subjectsDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteSubject_Click(object sender, RoutedEventArgs e)
-        {
-            if (subjectsDataGrid.SelectedItem is Subject selectedSubject)
-            {
-                _context.Subjects.Remove(selectedSubject);
-                _context.SaveChanges();
-                subjectsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void AddSubjectLesson_Click(object sender, RoutedEventArgs e)
-        {
-            var newSubjectLessonWindow = new InputWindow("Add Subject Lesson", "NameOfTypeLesson");
-            if (newSubjectLessonWindow.ShowDialog() == true)
-            {
-                var newSubjectLesson = new Subjectlesson
-                {
-                    NameOfTypeLesson = newSubjectLessonWindow.Input1
-                };
-                _context.Subjectlessons.Add(newSubjectLesson);
-                _context.SaveChanges();
-                subjectLessonsDataGrid.Items.Refresh();
-            }
-        }
-
-        private void EditSubjectLesson_Click(object sender, RoutedEventArgs e)
-        {
-            if (subjectLessonsDataGrid.SelectedItem is Subjectlesson selectedSubjectLesson)
-            {
-                var editSubjectLessonWindow = new InputWindow("Edit Subject Lesson", "NameOfTypeLesson", "", selectedSubjectLesson.NameOfTypeLesson);
-                if (editSubjectLessonWindow.ShowDialog() == true)
-                {
-                    selectedSubjectLesson.NameOfTypeLesson = editSubjectLessonWindow.Input1;
-                    _context.SaveChanges();
-                    subjectLessonsDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteSubjectLesson_Click(object sender, RoutedEventArgs e)
-        {
-            if (subjectLessonsDataGrid.SelectedItem is Subjectlesson selectedSubjectLesson)
-            {
-                _context.Subjectlessons.Remove(selectedSubjectLesson);
-                _context.SaveChanges();
-                subjectLessonsDataGrid.Items.Refresh();
-            }
-        }
-
+        // Day
         private void AddDay_Click(object sender, RoutedEventArgs e)
         {
             var weeks = _context.Weeks.Include(w => w.IdSemesterNavigation).ToList();
-            var inputWindow = new InputWindow("Add Day", "DayWeek", "Week", "", "", weeks.Cast<object>().ToList(), showDatePicker: true);
-            if (inputWindow.ShowDialog() == true)
-            {
-                var newDay = new Day
-                {
-                    DayWeek = inputWindow.Input1,
-                    IdWeekNavigation = (Week)inputWindow.SelectedItem
-                };
-                _context.Days.Add(newDay);
-                _context.SaveChanges();
-                daysDataGrid.Items.Refresh();
-            }
+            AddEntity<Day>("Add Day", "DayWeek", "Week", weeks.Cast<object>().ToList(), showDatePicker: true);
         }
+        private void EditDay_Click(object sender, RoutedEventArgs e) => EditEntity<Day>("Edit Day", "DayWeek", "", daysDataGrid);
+        private void DeleteDay_Click(object sender, RoutedEventArgs e) => DeleteEntity<Day>(daysDataGrid);
 
-        private void EditDay_Click(object sender, RoutedEventArgs e)
-        {
-            if (daysDataGrid.SelectedItem is Day selectedDay)
-            {
-                var editDayWindow = new InputWindow("Edit Day", "DayWeek", "", selectedDay.DayWeek);
-                if (editDayWindow.ShowDialog() == true)
-                {
-                    selectedDay.DayWeek = editDayWindow.Input1;
-                    _context.SaveChanges();
-                    daysDataGrid.Items.Refresh();
-                }
-            }
-        }
-
-        private void DeleteDay_Click(object sender, RoutedEventArgs e)
-        {
-            if (daysDataGrid.SelectedItem is Day selectedDay)
-            {
-                _context.Days.Remove(selectedDay);
-                _context.SaveChanges();
-                daysDataGrid.Items.Refresh();
-            }
-        }
-
+        // Week
         private void AddWeek_Click(object sender, RoutedEventArgs e)
         {
             var semesters = _context.Semesters.ToList();
-            var inputWindow = new InputWindow("Add Week", "TypeWeek", "Semester", "", "", semesters.Cast<object>().ToList());
+            AddEntity<Week>("Add Week", "TypeWeek", "Semester", semesters.Cast<object>().ToList());
+        }
+        private void EditWeek_Click(object sender, RoutedEventArgs e) => EditEntity<Week>("Edit Week", "TypeWeek", "", weeksDataGrid);
+        private void DeleteWeek_Click(object sender, RoutedEventArgs e) => DeleteEntity<Week>(weeksDataGrid);
+
+        // Semester
+        private void AddSemester_Click(object sender, RoutedEventArgs e) => AddEntity<Semester>("Add Semester", "NumberSemester");
+        private void EditSemester_Click(object sender, RoutedEventArgs e) => EditEntity<Semester>("Edit Semester", "NumberSemester", "", semestersDataGrid);
+        private void DeleteSemester_Click(object sender, RoutedEventArgs e) => DeleteEntity<Semester>(semestersDataGrid);
+
+        // StudentGroup
+        private void AddGroup_Click(object sender, RoutedEventArgs e) => AddEntity<Studentgroup>("Add Group", "NameGroup", "Course");
+        private void EditGroup_Click(object sender, RoutedEventArgs e) => EditEntity<Studentgroup>("Edit Group", "NameGroup", "Course", groupsDataGrid);
+        private void DeleteGroup_Click(object sender, RoutedEventArgs e) => DeleteEntity<Studentgroup>(groupsDataGrid);
+
+        // Teacher
+        private void AddTeacher_Click(object sender, RoutedEventArgs e) => AddEntity<Teacher>("Add Teacher", "NameTeacher", "IsActive");
+        private void EditTeacher_Click(object sender, RoutedEventArgs e) => EditEntity<Teacher>("Edit Teacher", "NameTeacher", "IsActive", teachersDataGrid);
+        private void DeleteTeacher_Click(object sender, RoutedEventArgs e) => DeleteEntity<Teacher>(teachersDataGrid);
+
+        // Cabinet
+        private void AddCabinet_Click(object sender, RoutedEventArgs e)
+        {
+            var cabinetTypes = _context.Cabinettypes.ToList();
+            AddEntity<Cabinet>("Add Cabinet", "NameCabinet", "TypeCabinet", cabinetTypes.Cast<object>().ToList());
+        }
+        private void EditCabinet_Click(object sender, RoutedEventArgs e) => EditEntity<Cabinet>("Edit Cabinet", "NameCabinet", "", cabinetsDataGrid);
+        private void DeleteCabinet_Click(object sender, RoutedEventArgs e) => DeleteEntity<Cabinet>(cabinetsDataGrid);
+
+        // CabinetType
+        private void AddCabinetType_Click(object sender, RoutedEventArgs e) => AddEntity<Cabinettype>("Add Cabinet Type", "TypeCabinet");
+        private void EditCabinetType_Click(object sender, RoutedEventArgs e) => EditEntity<Cabinettype>("Edit Cabinet Type", "TypeCabinet", "", cabinetTypesDataGrid);
+        private void DeleteCabinetType_Click(object sender, RoutedEventArgs e) => DeleteEntity<Cabinettype>(cabinetTypesDataGrid);
+
+        // Subject
+        private void AddSubject_Click(object sender, RoutedEventArgs e) => AddEntity<Subject>("Add Subject", "NameSubject");
+        private void EditSubject_Click(object sender, RoutedEventArgs e) => EditEntity<Subject>("Edit Subject", "NameSubject", "", subjectsDataGrid);
+        private void DeleteSubject_Click(object sender, RoutedEventArgs e) => DeleteEntity<Subject>(subjectsDataGrid);
+
+        private void AddEntity<T>(string title, string inputLabel1, string inputLabel2 = "", List<object> items = null, bool showDatePicker = false) where T : class, new()
+        {
+            var inputWindow = new InputWindow(title, inputLabel1, inputLabel2, "", "", items, showDatePicker);
             if (inputWindow.ShowDialog() == true)
             {
-                var newWeek = new Week
+                var newEntity = new T();
+
+                if (newEntity is Subjectlesson newSubjectLesson)
                 {
-                    TypeWeek = inputWindow.Input1,
-                    IdSemesterNavigation = (Semester)inputWindow.SelectedItem
-                };
-                _context.Weeks.Add(newWeek);
+                    newSubjectLesson.NameOfTypeLesson = inputWindow.Input1;
+                }
+                else if (newEntity is Day newDay)
+                {
+                    newDay.DayWeek = inputWindow.Input1;
+                    newDay.IdWeekNavigation = (Week)inputWindow.SelectedItem;
+                }
+                else if (newEntity is Week newWeek)
+                {
+                    newWeek.TypeWeek = inputWindow.Input1;
+                    newWeek.IdSemesterNavigation = (Semester)inputWindow.SelectedItem;
+                }
+                else if (newEntity is Semester newSemester)
+                {
+                    newSemester.NumberSemester = int.Parse(inputWindow.Input1);
+                }
+                else if (newEntity is Studentgroup newGroup)
+                {
+                    newGroup.NameGroup = inputWindow.Input1;
+                    newGroup.Course = inputWindow.Input2;
+                }
+                else if (newEntity is Teacher newTeacher)
+                {
+                    newTeacher.NameTeacher = inputWindow.Input1;
+                    newTeacher.IsActive = bool.Parse(inputWindow.Input2);
+                }
+                else if (newEntity is Cabinet newCabinet)
+                {
+                    newCabinet.NameCabinet = inputWindow.Input1;
+                    newCabinet.IdTypeNavigation = (Cabinettype)inputWindow.SelectedItem;
+                }
+                else if (newEntity is Cabinettype newCabinetType)
+                {
+                    newCabinetType.TypeCabinet = inputWindow.Input1;
+                }
+                else if (newEntity is Subject newSubject)
+                {
+                    newSubject.NameSubject = inputWindow.Input1;
+                }
+
+                _context.Set<T>().Add(newEntity);
                 _context.SaveChanges();
-                weeksDataGrid.Items.Refresh();
+                RefreshDataGrid<T>();
             }
         }
 
-        private void EditWeek_Click(object sender, RoutedEventArgs e)
+        private void EditEntity<T>(string title, string inputLabel1, string inputLabel2, DataGrid dataGrid) where T : class
         {
-            if (weeksDataGrid.SelectedItem is Week selectedWeek)
+            if (dataGrid.SelectedItem is T selectedEntity)
             {
-                var editWeekWindow = new InputWindow("Edit Week", "TypeWeek", "", selectedWeek.TypeWeek);
-                if (editWeekWindow.ShowDialog() == true)
+                var input1 = "";
+                var input2 = "";
+
+                if (selectedEntity is Subjectlesson subjectLesson)
                 {
-                    selectedWeek.TypeWeek = editWeekWindow.Input1;
+                    input1 = subjectLesson.NameOfTypeLesson;
+                }
+                else if (selectedEntity is Day day)
+                {
+                    input1 = day.DayWeek;
+                }
+                else if (selectedEntity is Week week)
+                {
+                    input1 = week.TypeWeek;
+                }
+                else if (selectedEntity is Semester semester)
+                {
+                    input1 = semester.NumberSemester.ToString();
+                }
+                else if (selectedEntity is Studentgroup group)
+                {
+                    input1 = group.NameGroup;
+                    input2 = group.Course;
+                }
+                else if (selectedEntity is Teacher teacher)
+                {
+                    input1 = teacher.NameTeacher;
+                    input2 = teacher.IsActive.ToString();
+                }
+                else if (selectedEntity is Cabinet cabinet)
+                {
+                    input1 = cabinet.NameCabinet;
+                }
+                else if (selectedEntity is Cabinettype cabinetType)
+                {
+                    input1 = cabinetType.TypeCabinet;
+                }
+                else if (selectedEntity is Subject subject)
+                {
+                    input1 = subject.NameSubject;
+                }
+
+                var editWindow = new InputWindow(title, inputLabel1, inputLabel2, input1, input2);
+                if (editWindow.ShowDialog() == true)
+                {
+                    if (selectedEntity is Subjectlesson editedSubjectLesson)
+                    {
+                        editedSubjectLesson.NameOfTypeLesson = editWindow.Input1;
+                    }
+                    else if (selectedEntity is Day editedDay)
+                    {
+                        editedDay.DayWeek = editWindow.Input1;
+                    }
+                    else if (selectedEntity is Week editedWeek)
+                    {
+                        editedWeek.TypeWeek = editWindow.Input1;
+                    }
+                    else if (selectedEntity is Semester editedSemester)
+                    {
+                        editedSemester.NumberSemester = int.Parse(editWindow.Input1);
+                    }
+                    else if (selectedEntity is Studentgroup editedGroup)
+                    {
+                        editedGroup.NameGroup = editWindow.Input1;
+                        editedGroup.Course = editWindow.Input2;
+                    }
+                    else if (selectedEntity is Teacher editedTeacher)
+                    {
+                        editedTeacher.NameTeacher = editWindow.Input1;
+                        editedTeacher.IsActive = bool.Parse(editWindow.Input2);
+                    }
+                    else if (selectedEntity is Cabinet editedCabinet)
+                    {
+                        editedCabinet.NameCabinet = editWindow.Input1;
+                    }
+                    else if (selectedEntity is Cabinettype editedCabinetType)
+                    {
+                        editedCabinetType.TypeCabinet = editWindow.Input1;
+                    }
+                    else if (selectedEntity is Subject editedSubject)
+                    {
+                        editedSubject.NameSubject = editWindow.Input1;
+                    }
+
                     _context.SaveChanges();
-                    weeksDataGrid.Items.Refresh();
+                    dataGrid.Items.Refresh();
                 }
             }
         }
 
-        private void DeleteWeek_Click(object sender, RoutedEventArgs e)
+        private void DeleteEntity<T>(DataGrid dataGrid) where T : class
         {
-            if (weeksDataGrid.SelectedItem is Week selectedWeek)
+            if (dataGrid.SelectedItem is T selectedEntity)
             {
-                _context.Weeks.Remove(selectedWeek);
+                _context.Set<T>().Remove(selectedEntity);
                 _context.SaveChanges();
+                dataGrid.Items.Refresh();
+            }
+        }
+
+        private void RefreshDataGrid<T>() where T : class
+        {
+            if (typeof(T) == typeof(Subjectlesson))
+            {
+                subjectLessonsDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Day))
+            {
+                daysDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Week))
+            {
                 weeksDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Semester))
+            {
+                semestersDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Studentgroup))
+            {
+                groupsDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Teacher))
+            {
+                teachersDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Cabinet))
+            {
+                cabinetsDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Cabinettype))
+            {
+                cabinetTypesDataGrid.Items.Refresh();
+            }
+            else if (typeof(T) == typeof(Subject))
+            {
+                subjectsDataGrid.Items.Refresh();
             }
         }
     }

@@ -63,12 +63,19 @@ namespace ScheduleApp
             Input2 = InputTextBox2.Text;
             SelectedItem = InputComboBox2.SelectedItem;
 
+            // Проверка на заполнение всех полей
+            if (string.IsNullOrEmpty(Input1) || (InputTextBox2.Visibility == Visibility.Visible && string.IsNullOrEmpty(Input2)) || (InputComboBox2.Visibility == Visibility.Visible && SelectedItem == null) || (InputDatePicker.Visibility == Visibility.Visible && !InputDatePicker.SelectedDate.HasValue))
+            {
+                MessageBox.Show("Пожалуйста заполните все поля.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             // Получаем выбранную дату из DatePicker, если он видим
             if (InputDatePicker.Visibility == Visibility.Visible)
             {
                 SelectedDate = InputDatePicker.SelectedDate ?? DateTime.Now;
             }
-
+            MessageBox.Show("Данные успешно добавлены.", "Успешно", MessageBoxButton.OK);
             DialogResult = true;
         }
     }
